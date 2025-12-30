@@ -1,5 +1,5 @@
 #!/usr/bin/env julia
-include("solution_iter.jl")
+include("solution_iter_delta.jl")
 
 function greedy_heuristic_one_extend(
     instance::PDPInstance;
@@ -87,7 +87,7 @@ function greedy_heuristic_from_solution(
             open_dropoffs,
         )
         push!(iter_score, best_score)
-        log_iteration(iter_n, Float64(best_score), verbose)
+        log_iteration(iter_n, best_score, verbose)
         iter_n += 1
         # quit after gamma steps if called by pilot
         if lookahead_gamma != nothing && iter_n == (lookahead_gamma - 1)
@@ -96,7 +96,7 @@ function greedy_heuristic_from_solution(
     end
     best_solution = solution_clean!(instance, best_solution)
     best_score = objective_value(instance, best_solution)
-    log_result(instance, best_solution, Float64(best_score), verbose)
+    log_result(instance, best_solution, best_score, verbose)
     return (iter_score, iter_n, best_solution, best_score)
 end
 

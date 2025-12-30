@@ -5,7 +5,7 @@ using Random, Combinatorics, DataStructures
 
 #region ############## DELTA OPTIMIZATION ##############
 
-PDPSwap = Vector{NTuple{4, Int64}}
+PDPSwap = Vector{NTuple{4,Int64}}
 PDPNeighborhood = BinaryMinHeap{Tuple{Float64,PDPSwap}}
 
 function delta_objective_value_construct(
@@ -18,13 +18,15 @@ function delta_objective_value_construct(
     solution_k = solution[route_k]
     solution_init = length(solution_k) == 0
     # go from currect location (iter0: depot // iter1+: loc_i) to next and then back to depot
+    distance_old_home = solution_init ? 0 : instance.distance_matrix[solution_k[end], end]
     distance_old_new = solution_init ? instance.distance_matrix[end, loc_i] : instance.distance_matrix[solution_k[end], loc_i]
-    distance_home = instance.distance_matrix[loc_i, end]
+    distance_new_home = instance.distance_matrix[loc_i, end]
     # calculate hypothetical costs
-    distances[route_k] += (distance_old_new + distance_home)
+    distance_diff = -distance_old_home + distance_old_new + distance_new_home
+    distances[route_k] += distance_diff
     obj_val = sum(distances) + instance.ρ * (1 - jain_fairness(instance, distances))
-    distances[route_k] -= (distance_old_new + distance_home) # avoid deepcopy by reversing
-    return obj_val, distance_old_new
+    distances[route_k] -= distance_diff # avoid deepcopy by reversing
+    return obj_val, distance_diff
 end
 
 function delta_objective_value_improve(instance::PDPInstance, start_sol::PDPSolutionVector, swaps::Vector{Tuple{Int64,Int64,Int64,Int64}})

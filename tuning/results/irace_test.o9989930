@@ -1,0 +1,93 @@
+#------------------------------------------------------------------------------
+# irace: An implementation in R of (Elitist) Iterated Racing
+# Version: 4.2.0.b50b134
+# Copyright (C) 2010-2025
+# Manuel Lopez-Ibanez     <manuel.lopez-ibanez@manchester.ac.uk>
+# Jeremie Dubois-Lacoste
+# Leslie Perez Caceres    <leslie.perez.caceres@ulb.ac.be>
+#
+# This is free software, and you are welcome to redistribute it under certain
+# conditions.  See the GNU General Public License for details. There is NO
+# WARRANTY; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# irace builds upon previous code from the race package:
+#     race: Racing methods for the selection of the best
+#     Copyright (C) 2003 Mauro Birattari
+#------------------------------------------------------------------------------
+# installed at: /home1/share/conda/miniforge3/envs/r-irace/lib/R/library/irace
+# called with: 
+# 2026-01-11 16:13:46 CET: Reading parameter file '/home1/e12434685/tuning/parameters.txt'.
+# 2026-01-11 16:13:47 CET: Estimating execution time using 0.1% of 1800 = 2
+# 2026-01-11 16:21:09 CET: Estimated execution time is 30 based on 2 configurations and 5 instances. Used time: 292.698580026627, remaining time: 1507.30141997337, remaining budget (experiments): 50
+# 2026-01-11 16:21:09 CET: Initialization
+# Elitist race
+# Elitist new instances: 1
+# Elitist limit: 2
+# nbIterations: 1
+# minNbSurvival: 4
+# nbParameters: 7
+# seed: 1099340198
+# confidence level: 0.95
+# budget: 50
+# time budget: 1507.30141997337
+# mu: 5
+# deterministic: FALSE
+
+# 2026-01-11 16:21:09 CET: Iteration 1 of 1
+# experimentsUsed: 10
+# timeUsed: 292.698580026627
+# boundEstimate: 30
+# remainingBudget: 50
+# currentBudget: 50
+# nbConfigurations: 8
+# Markers:
+     x No test is performed.
+     c Configurations are discarded only due to capping.
+     - The test is performed and some configurations are discarded.
+     = The test is performed but no configuration is discarded.
+     ! The test is performed and configurations could be discarded but elite configurations are preserved.
+     . All alive configurations are elite and nothing is discarded.
+
++-+-----------+-----------+-----------+----------------+-----------+--------+-----+----+------+
+| |   Instance|      Alive|       Best|       Mean best| Exp so far|  W time|  rho|KenW|  Qvar|
++-+-----------+-----------+-----------+----------------+-----------+--------+-----+----+------+
+|x|          3|          8|          7|     1930.031397|          6|00:03:52|   NA|  NA|    NA|
+|x|          4|          8|          7|     1920.045658|         12|00:03:52|+0.86|0.93|0.0184|
+|x|          5|          8|          1|     1826.185252|         18|00:03:42|+0.89|0.93|0.0203|
+|x|          2|          8|          1|     1807.154365|         24|00:03:54|+0.90|0.93|0.0154|
+|-|          1|          3|          3|     1870.577109|         30|00:03:45|-0.20|0.04|0.8205|
++-+-----------+-----------+-----------+----------------+-----------+--------+-----+----+------+
+Best-so-far configuration:           3    mean value:      1870.577109
+Description of the best-so-far configuration:
+  .ID. niterations mcolony localpherodecay pherodecay   beta alpha factorgreed .PARENT.
+3    3           9      12          0.1509     0.0256 5.6519 1.287      0.7973       NA
+
+# 2026-01-11 16:40:18 CET: Elite configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+  niterations mcolony localpherodecay pherodecay   beta  alpha factorgreed
+3           9      12          0.1509     0.0256 5.6519 1.2870      0.7973
+1          25      13          0.1598     0.3684 7.0541 0.3145      0.6965
+7          15      18          0.4628     0.4622 9.4016 1.9119      0.6723
+# 2026-01-11 16:40:18 CET: Stopped because there is not enough budget to enforce the value of nbConfigurations.
+# Iteration: 2
+# nbIterations: 2
+# experimentsUsed: 40
+# timeUsed: 1019.123
+# remainingBudget: 31
+# currentBudget: 31
+# number of elites: 3
+# nbConfigurations: 6
+# Total CPU user time: 1523.005, CPU sys time: 44.724, Wall-clock time: 1591.283
+# Best configurations (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+  niterations mcolony localpherodecay pherodecay   beta  alpha factorgreed
+3           9      12          0.1509     0.0256 5.6519 1.2870      0.7973
+1          25      13          0.1598     0.3684 7.0541 0.3145      0.6965
+7          15      18          0.4628     0.4622 9.4016 1.9119      0.6723
+# Best configurations as commandlines (first number is the configuration ID; listed from best to worst according to the sum of ranks):
+3 --n-iterations 9 --m-colony 12 --l-phero-decay 0.1509 --phero-decay 0.0256 --beta 5.6519 --alpha 1.287 --factor-greed 0.7973
+1 --n-iterations 25 --m-colony 13 --l-phero-decay 0.1598 --phero-decay 0.3684 --beta 7.0541 --alpha 0.3145 --factor-greed 0.6965
+7 --n-iterations 15 --m-colony 18 --l-phero-decay 0.4628 --phero-decay 0.4622 --beta 9.4016 --alpha 1.9119 --factor-greed 0.6723
+
+
+# Testing of elite configurations: 1 
+# Testing iteration configurations: FALSE 
+# 2026-01-11 16:40:18 CET: No test instances, skip testing

@@ -1,0 +1,7 @@
+Warning: == irace == A default scenario file '/home1/e12434685/tuning/scenario.txt' has been found and will be read.
+Warning: == irace == With the current settings and estimated time per run (30) irace will not have enough budget to execute the minimum number of iterations (4). Execution will continue by assuming that the estimated time is too high and reducing the minimum number of iterations, however, if the estimation was correct or too low, results might not be better than random sampling.
+
+Warning message:
+In irace.cmdline() : 'irace.cmdline' is deprecated.
+Use 'irace.cmdline' instead.
+See help("Deprecated")

@@ -1,0 +1,21 @@
+#------------------------------------------------------------------------------
+# irace: An implementation in R of (Elitist) Iterated Racing
+# Version: 4.2.0.b50b134
+# Copyright (C) 2010-2025
+# Manuel Lopez-Ibanez     <manuel.lopez-ibanez@manchester.ac.uk>
+# Jeremie Dubois-Lacoste
+# Leslie Perez Caceres    <leslie.perez.caceres@ulb.ac.be>
+#
+# This is free software, and you are welcome to redistribute it under certain
+# conditions.  See the GNU General Public License for details. There is NO
+# WARRANTY; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#
+# irace builds upon previous code from the race package:
+#     race: Racing methods for the selection of the best
+#     Copyright (C) 2003 Mauro Birattari
+#------------------------------------------------------------------------------
+# installed at: /home1/share/conda/miniforge3/envs/r-irace/lib/R/library/irace
+# called with: 
+# 2026-01-11 12:58:39 CET: Reading parameter file '/home1/e12434685/tuning/parameters.txt'.
+# 2026-01-11 12:58:39 CET: Estimating execution time using 0.1% of 100 = 1
+# 2026-01-11 13:02:46 CET: Estimated execution time is 9 based on 2 configurations and 5 instances. Used time: 86.8407938480377, remaining time: 13.1592061519623, remaining budget (experiments): 1

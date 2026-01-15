@@ -1,4 +1,6 @@
 library("irace")
+setwd("./tuning/")
+
 args <- commandArgs()
 algorithm <- ifelse(!is.na(args[6]), args[6], "acs")
 instance_size <- ifelse(!is.na(args[7]), args[7], "50")
@@ -143,7 +145,7 @@ maxExperiments <- 500
 ## `targetRunner` must return two values: cost and time. This value and the
 ## one returned by `targetRunner` must use the same units (seconds, minutes,
 ## iterations, evaluations, ...).
-maxTime <- 1800
+maxTime <- 7200
 
 ## Fraction (smaller than 1) of the budget used to estimate the mean
 ## computation time of a configuration. Only used when `maxTime` > 0
@@ -154,7 +156,7 @@ maxTime <- 1800
 
 ## Number of calls to `targetRunner` to execute in parallel. Values `0` or `1`
 ## mean no parallelization.
-parallel <- 8
+parallel <- 24
 
 ## Enable/disable load-balancing when executing experiments in parallel.
 ## Load-balancing makes better use of computing resources, but increases

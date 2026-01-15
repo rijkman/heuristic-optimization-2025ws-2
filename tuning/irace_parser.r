@@ -1,5 +1,7 @@
 library("tibble")
 library("dplyr")
+setwd("./tuning/")
+
 args <- commandArgs()
 algorithm <- ifelse(!is.na(args[6]), args[6], "lns")
 instance_size <- ifelse(!is.na(args[7]), args[7], "50")
@@ -21,7 +23,7 @@ for (par_idx in 1:irace_params_len) {
 irace_exps <- irace_res$state$experiment_log
 irace_exps <- irace_exps %>%
   group_by(configuration) %>%
-  summarise(median_cost = median(cost), median_time = median(time)) %>%
+  summarise(median_score = median(cost), median_time = median(time)) %>%
   select(-configuration)
 
 # obtain complete tuning data
@@ -31,7 +33,7 @@ irace_df <- irace_df %>%
   setNames(irace_labels) %>%
   add_column(instance_size = as.numeric(instance_size), .before = 1) %>%
   bind_cols(irace_exps) %>%
-  arrange(median_cost)
+  arrange(median_score)
 
 # store parsed tuning csv
 write.csv(irace_df, paste0(irace_file, ".csv"), row.names = FALSE, quote=FALSE)

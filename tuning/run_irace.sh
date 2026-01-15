@@ -9,10 +9,6 @@
 ALGORITHM=$1
 INSTANCE_SIZE=$2
 
-# activate work environment
-source /home1/share/conda/miniforge3/etc/profile.d/conda.sh
-conda activate r-irace
-
 # execute irace tuning
-Rscript irace_runner.r $ALGORITHM $INSTANCE_SIZE
-Rscript irace_parser.r $ALGORITHM $INSTANCE_SIZE
+Rscript ./tuning/irace_runner.r $ALGORITHM $INSTANCE_SIZE
+Rscript ./tuning/irace_parser.r $ALGORITHM $INSTANCE_SIZE

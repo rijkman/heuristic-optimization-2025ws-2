@@ -1,14 +1,10 @@
 #!/usr/bin/env julia
-include("instance_parsing.jl")
 include("solution_iter.jl")
-using Random, Combinatorics, DataStructures
 
 #region ############## DELTA OPTIMIZATION ##############
 
-PDPSwap = Vector{NTuple{4,Int64}}
-PDPNeighborhood = BinaryMinHeap{Tuple{Float64,PDPSwap}}
-
 function delta_objective_value_construct(
+    fairness::Function,
     instance::PDPInstance,
     solution::PDPSolutionVector,
     distances::Vector{Int64},
@@ -24,34 +20,55 @@ function delta_objective_value_construct(
     # calculate hypothetical costs
     distance_diff = -distance_old_home + distance_old_new + distance_new_home
     distances[route_k] += distance_diff
-    obj_val = sum(distances) + instance.ρ * (1 - jain_fairness(instance, distances))
+    obj_val = sum(distances) + instance.ρ * (1 - fairness(instance, distances))
     distances[route_k] -= distance_diff # avoid deepcopy by reversing
     return obj_val, distance_diff
 end
 
-function delta_objective_value_improve(instance::PDPInstance, start_sol::PDPSolutionVector, swaps::Vector{Tuple{Int64,Int64,Int64,Int64}})
-    distances::Vector{Int64} = []
-    apply_swap!(start_sol, swaps)
+function delta_objective_value_insert(
+    fairness::Function,
+    instance::PDPInstance,
+    solution::PDPSolutionVector,
+    distances::Vector{Int64},
+    route_k::Int64,
+    loc_i::Int64,
+    insert_idx::Int64,
+)
+    solution_k = solution[route_k]
+    n_k = length(solution_k)
+    dm = instance.distance_matrix
 
-    for route_k in start_sol
-        distance = 0
-        car_locations = length(route_k)
-        if car_locations > 0
-            for i in 1:car_locations-1
-                distance += instance.distance_matrix[route_k[i], route_k[i+1]]
-            end
-            # add distances for travelling to and from depot
-            distance += instance.distance_matrix[route_k[1], end]
-            distance += instance.distance_matrix[route_k[end], end]
-        end
-        push!(distances, distance)
-    end
+    depot_index, _ = size(dm)
+    pre = insert_idx == 1 ? depot_index : solution_k[insert_idx-1]
+    suc = insert_idx > n_k ? depot_index : solution_k[insert_idx]
+    distance_diff = dm[pre, loc_i] + dm[loc_i, suc] - dm[pre, suc]
 
-    apply_swap!(start_sol, swaps)
-    return sum(distances) + instance.ρ * (1 - jain_fairness(instance, distances))
+    distances[route_k] += distance_diff
+    obj_val = sum(distances) + instance.ρ * (1 - fairness(instance, distances))
+    distances[route_k] += -distance_diff # reverse changes (to avoid deepcopy)
+    return obj_val, distance_diff
 end
 
-function delta_is_feasible(instance::PDPInstance, satisfied_reqs::Vector{Int}, start_sol::PDPSolutionVector, swaps::Vector{Tuple{Int64,Int64,Int64,Int64}}, verbose=false)
+function delta_objective_value_improve(
+    fairness::Function,
+    instance::PDPInstance,
+    start_sol::PDPSolutionVector,
+    swaps::Vector{Tuple{Int64,Int64,Int64,Int64}}
+)
+    distances::Vector{Int64} = []
+    apply_swap!(start_sol, swaps)
+    distances = calculate_distances(instance, start_sol)
+    apply_swap!(start_sol, swaps)
+    return objective_formula(fairness, instance, distances)
+end
+
+function delta_is_feasible(
+    instance::PDPInstance,
+    satisfied_reqs::Vector{Int},
+    start_sol::PDPSolutionVector,
+    swaps::Vector{Tuple{Int64,Int64,Int64,Int64}},
+    verbose=false
+)
     served_requests = 0
     affected_cars = falses(instance.n_vehicles)
     for (car_i, car_j, req_i, req_j) in swaps
@@ -63,7 +80,7 @@ function delta_is_feasible(instance::PDPInstance, satisfied_reqs::Vector{Int}, s
     for route_k_idx in 1:instance.n_vehicles
         if !affected_cars[route_k_idx]
             served_requests += satisfied_reqs[route_k_idx]
-            continue #skip this
+            continue # skip this
         end
         route_k = start_sol[route_k_idx]
         visited_k = falses(instance.n_requests * 2)
@@ -77,7 +94,7 @@ function delta_is_feasible(instance::PDPInstance, satisfied_reqs::Vector{Int}, s
                     if verbose
                         @warn "Exceeded Capacity!"
                     end
-                    apply_swap!(start_sol, swaps) #swap back
+                    apply_swap!(start_sol, swaps) # swap back
                     return false
                 end
             else # is dropoff
@@ -121,18 +138,24 @@ function delta_is_feasible(instance::PDPInstance, satisfied_reqs::Vector{Int}, s
         end
     end
 
-    apply_swap!(start_sol, swaps) #swap back
+    apply_swap!(start_sol, swaps) # swap back
     return true
 end
 
-function apply_swap!(sol::PDPSolutionVector, swaps::Vector{Tuple{Int64,Int64,Int64,Int64}})
+function apply_swap!(
+    sol::PDPSolutionVector,
+    swaps::Vector{Tuple{Int64,Int64,Int64,Int64}}
+)
     for (car_i, car_j, req_i, req_j) in swaps
         sol[car_i][req_i], sol[car_j][req_j] = sol[car_j][req_j], sol[car_i][req_i]
     end
     return sol
 end
 
-function pc_served_requests(instance::PDPInstance, solution::PDPSolutionVector)::Vector{Int}
+function pc_served_requests(
+    instance::PDPInstance,
+    solution::PDPSolutionVector
+)
     served_reqs_total = Vector{Int}()
 
     # requirement 1: vehicle capacity must never be exceeded at any point along route
@@ -166,13 +189,14 @@ end
 #region ############## NEIGHBORHOODS ##############
 
 function delta_get_neighbor_solution(
+    fairness::Function,
+    neighborhood_func::Function,
+    step_func::Function,
     instance::PDPInstance,
     solution::PDPSolutionVector,
     score::Float64,
-    neighborhood_func::Function,
-    step_func::Function,
 )
-    solution_neighbors = neighborhood_func(instance, solution)
+    solution_neighbors = neighborhood_func(fairness, instance, solution)
     best_swaps, best_score = step_func(solution_neighbors, solution, score)
     best_solution = apply_swap!(deepcopy(solution), best_swaps)
     return best_solution, best_score
@@ -197,9 +221,13 @@ function delta_step_random(
     return solution, score
 end
 
-function delta_neighbor_in_switch_location(instance::PDPInstance, solution::PDPSolutionVector)
+function delta_neighbor_in_switch_location(
+    fairness::Function,
+    instance::PDPInstance,
+    solution::PDPSolutionVector
+)
     neigborhood = PDPNeighborhood()
-    #prepopulate 
+    # prepopulate 
     served_requests = pc_served_requests(instance, solution)
 
     swaps = Vector{Tuple{Int,Int,Int,Int}}()
@@ -211,7 +239,7 @@ function delta_neighbor_in_switch_location(instance::PDPInstance, solution::PDPS
             for j in i+1:route_kn
                 swaps = [(k, k, i, j)]
                 if delta_is_feasible(instance, served_requests, solution, swaps)
-                    score = delta_objective_value_improve(instance, solution, swaps)
+                    score = delta_objective_value_improve(fairness, instance, solution, swaps)
                     push!(neigborhood, (score, [(k, k, i, j)]))
                 end
             end
@@ -220,7 +248,11 @@ function delta_neighbor_in_switch_location(instance::PDPInstance, solution::PDPS
     return neigborhood
 end
 
-function delta_neighbor_in_subsequence(instance::PDPInstance, solution::PDPSolutionVector)
+function delta_neighbor_in_subsequence(
+    fairness::Function,
+    instance::PDPInstance,
+    solution::PDPSolutionVector
+)
     neighborhood = PDPNeighborhood()
     served_requests = pc_served_requests(instance, solution)
     max_subsequence_lengths = 5:8
@@ -230,17 +262,14 @@ function delta_neighbor_in_subsequence(instance::PDPInstance, solution::PDPSolut
         route_k = solution[k]
         n = length(route_k)
         for l in max_subsequence_lengths
-            #start of subsequence_1
+            # start of subsequence_1
             for i in 1:(n-2l+1)
-                #start of subsequence_2
+                # start of subsequence_2
                 for j in i+l:(n-l+1)
-                    #swap subsequences
-                    swaps = [
-                        (k, k, i + t, j + t)
-                        for t in 0:(l-1)
-                    ]
+                    # swap subsequences
+                    swaps = [(k, k, i + t, j + t) for t in 0:(l-1)]
                     if delta_is_feasible(instance, served_requests, solution, swaps)
-                        score = delta_objective_value_improve(instance, solution, swaps)
+                        score = delta_objective_value_improve(fairness, instance, solution, swaps)
                         push!(neighborhood, (score, swaps))
                     end
                 end
@@ -252,7 +281,11 @@ function delta_neighbor_in_subsequence(instance::PDPInstance, solution::PDPSolut
 
 end
 
-function delta_neighbor_between_switch_request(instance::PDPInstance, solution::Vector{Vector{Int64}})
+function delta_neighbor_between_switch_request(
+    fairness::Function,
+    instance::PDPInstance,
+    solution::Vector{Vector{Int64}}
+)
     """
     Returns all feasible solutons, where one pair
     in the following format:
@@ -272,10 +305,7 @@ function delta_neighbor_between_switch_request(instance::PDPInstance, solution::
             if pickup_flag
                 tracked_pickups[solution[k][i]+instance.n_requests] = i
             else
-                push!(
-                    fulfilled_requests,
-                    (tracked_pickups[solution[k][i]], i)
-                )
+                push!(fulfilled_requests, (tracked_pickups[solution[k][i]], i))
             end
         end
         push!(all_fulfilled_requests, fulfilled_requests)
@@ -292,10 +322,8 @@ function delta_neighbor_between_switch_request(instance::PDPInstance, solution::
                         (car_i, car_j, dropoff_i, dropoff_j)
                     ]
                     if delta_is_feasible(instance, served_reqs, solution, swaps)
-                        score = delta_objective_value_improve(instance, solution, swaps)
-                        push!(neighborhood, (
-                            score, swaps
-                        ))
+                        score = delta_objective_value_improve(fairness, instance, solution, swaps)
+                        push!(neighborhood, (score, swaps))
                     end
                 end
             end

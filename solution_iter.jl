@@ -1,21 +1,51 @@
 #!/usr/bin/env julia
 include("logging.jl")
-include("instance_parsing.jl")
-using Random, Combinatorics, DataStructures
 
-#region ############## OPTIMIZATION ##############
+#region ############## FAIRNESS ##############
 
 function jain_fairness(instance::PDPInstance, distances::Vector{Int64})
     nom = sum(distances)^2
-    denom = sum(map(x -> x^2, distances)) * instance.n_vehicles
-    if denom == 0
-        return 0
-    else
-        return nom / denom
-    end
+    denom = sum(map(rk -> rk^2, distances)) * instance.n_vehicles
+    return denom == 0 ? 0 : nom / denom
 end
 
-function objective_value(instance::PDPInstance, solution::PDPSolutionVector)
+function max_min_fairness(instance::PDPInstance, distances::Vector{Int64})
+    nom = minimum(distances)
+    denom = maximum(distances)
+    return denom == 0 ? 0 : nom / denom
+end
+
+function gini_fairness(instance::PDPInstance, distances::Vector{Int64})
+    nom = sum([abs(rk - rkk) for rk in distances, rkk in distances])
+    denom = sum(distances) * 2instance.n_vehicles
+    return denom == 0 ? 0 : nom / denom
+end
+
+function objective_formula(
+    fairness::Function,
+    instance::PDPInstance,
+    distances::Vector{Int64}
+)
+    return sum(distances) + instance.ρ * (1 - fairness(instance, distances))
+end
+
+#endregion
+
+#region ############## OPTIMIZATION ##############
+
+function objective_value(
+    fairness::Function,
+    instance::PDPInstance,
+    solution::PDPSolutionVector
+)
+    distances = calculate_distances(instance, solution)
+    return objective_formula(fairness, instance, distances)
+end
+
+function calculate_distances(
+    instance::PDPInstance,
+    solution::PDPSolutionVector
+)
     distances::Vector{Int64} = []
     for route_k in solution # for every car
         distance = 0
@@ -30,10 +60,34 @@ function objective_value(instance::PDPInstance, solution::PDPSolutionVector)
         end
         push!(distances, distance)
     end
-    return sum(distances) + instance.ρ * (1 - jain_fairness(instance, distances))
+    return distances
 end
 
-function is_feasible(instance::PDPInstance, solution::PDPSolutionVector, verbose::Bool=true)
+function calculate_loads(
+    instance::PDPInstance,
+    solution::PDPSolutionVector
+)
+    loads = [Int[] for _ in 1:instance.n_vehicles]
+    for k in 1:instance.n_vehicles
+        current_load = 0
+        for req in solution[k]
+            _, _, is_pickup, load = instance.requests[req]
+            if is_pickup
+                current_load += load
+            else
+                current_load = max(0, current_load - load)
+            end
+            push!(loads[k], current_load)
+        end
+    end
+    return loads
+end
+
+function is_feasible(
+    instance::PDPInstance,
+    solution::PDPSolutionVector,
+    verbose::Bool=true
+)
     served_requests = 0
 
     # requirement 1: vehicle capacity must never be exceeded at any point along route
@@ -88,17 +142,13 @@ function is_feasible(instance::PDPInstance, solution::PDPSolutionVector, verbose
     return true
 end
 
-function deepcopy_all(args...)
-    # try to avoid this logic
-    return length(args) > 1 ? deepcopy.(args) : deepcopy(args[1])
-end
-
 #endregion
 
 #region ############## NEIGHBORHOODS ##############
 
 # neighborhood and step function structs
 function get_neighbor_solution(
+    fairness::Function,
     instance::PDPInstance,
     solution::PDPSolutionVector,
     score::Float64,
@@ -106,11 +156,12 @@ function get_neighbor_solution(
     step_func::Function,
 )
     solution_neighbors = neighborhood_func(instance, solution)
-    best_solution, best_score = step_func(instance, solution, score, solution_neighbors)
+    best_solution, best_score = step_func(fairness, instance, solution, score, solution_neighbors)
     return best_solution, best_score
 end
 
 function step_first(
+    fairness::Function,
     instance::PDPInstance,
     solution::PDPSolutionVector,
     score::Float64,
@@ -119,7 +170,7 @@ function step_first(
     best_solution = solution
     best_score = score
     for curr_neighbor in solution_neighbors
-        curr_score = objective_value(instance, curr_neighbor)
+        curr_score = objective_value(fairness, instance, curr_neighbor)
         if curr_score < best_score
             best_score = curr_score
             best_solution = curr_neighbor
@@ -130,6 +181,7 @@ function step_first(
 end
 
 function step_best(
+    fairness::Function,
     instance::PDPInstance,
     solution::PDPSolutionVector,
     score::Float64,
@@ -138,7 +190,7 @@ function step_best(
     best_solution = solution
     best_score = score
     for curr_neighbor in solution_neighbors
-        curr_score = objective_value(instance, curr_neighbor)
+        curr_score = objective_value(fairness, instance, curr_neighbor)
         if curr_score < best_score
             best_score = curr_score
             best_solution = curr_neighbor
@@ -149,13 +201,14 @@ function step_best(
 end
 
 function step_random(
+    fairness::Function,
     instance::PDPInstance,
     solution::PDPSolutionVector,
     score::Float64,
     solution_neighbors::Set{PDPSolutionVector},
 )
     best_solution = rand(solution_neighbors) # choose random neighbor
-    best_score = objective_value(instance, best_solution)
+    best_score = objective_value(fairness, instance, best_solution)
     return best_solution, best_score
 end
 

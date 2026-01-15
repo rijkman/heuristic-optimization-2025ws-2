@@ -1,5 +1,5 @@
 #!/usr/bin/env julia
-using Plots, Printf, Logging
+using ArgParse, Printf, Logging, CPUTime, JSON, CSV, DataStructures, Random, IterTools, Statistics, StatsBase, Combinatorics, Plots
 Plots.default(show=true)
 
 struct PDPInstance
@@ -18,12 +18,17 @@ struct PDPInstance
 end
 
 PDPSolutionVector = Vector{Vector{Int64}}
+PDPSwap = Vector{NTuple{4,Int64}}
+PDPNeighborhood = BinaryMinHeap{Tuple{Float64,PDPSwap}}
 
 #region ############## I/O PARSING ##############
 
-function read_PDPInstance(path_in::String, instance_name::String)
+BASE_DIR = "data"
+INSTANCE_DIR = "instances"
+
+function read_PDPInstance(path_full::String)
     @info "Reading new instance."
-    open(joinpath(path_in, instance_name), "r") do f
+    open(path_full, "r") do f
         # read in params
         params = split(readline(f), " ")
         n_requests, n_vehicles, capacity, γ = parse.(Int64, (params[1:4]))
@@ -70,34 +75,27 @@ end
 
 function solve_PDPInstance(
     ;
-    path_dir::String,
     instance_size::String,
     instance_type::String,
     instance_name::String,
     algorithm::Function,
     args...,
 )
-    path_pwd = pwd()
-    path_instance = joinpath(path_pwd, "{}", instance_size, instance_type)
-    path_in = replace(path_instance, "{}" => path_dir)
-    instance = read_PDPInstance(path_in, instance_name)
+    path_in = joinpath(pwd(), BASE_DIR, INSTANCE_DIR, instance_size, instance_type, instance_name)
+    instance = read_PDPInstance(path_in)
     return algorithm(instance; args...)
 end
 
 function test_PDPInstance(
     ;
-    path_dir::String,
     instance_size::String,
     instance_type::String,
     instance_name::String,
     algorithm::Union{Function,Nothing}=nothing,
     args...,
 )
-    path_pwd = pwd()
-    path_instance = joinpath(path_pwd, "{}", instance_size, instance_type)
-    path_in = replace(path_instance, "{}" => path_dir)
-    path_out = replace(path_instance, "{}" => path_dir * "_solved")
-    instance = read_PDPInstance(path_in, instance_name)
+    path_in = joinpath(pwd(), BASE_DIR, INSTANCE_DIR, instance_size, instance_type, instance_name)
+    instance = read_PDPInstance(path_in)
     if algorithm == nothing
         visualize(instance)
     else
@@ -157,7 +155,6 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__ # if main
     test_PDPInstance(
-        path_dir="instances",
         instance_size="50",
         instance_type="train",
         instance_name="instance1_nreq50_nveh2_gamma50.txt",

@@ -1,25 +1,31 @@
 #!/usr/bin/env julia
-include("solution_iter_delta.jl")
 include("greedy_random.jl")
+
 function delta_local_search(
     instance::PDPInstance;
     solution::PDPSolutionVector,
     score::Float64,
-    neighborhood_func::Function,
-    step_func::Function,
-    stop_time::Float64=60.0,
-    stop_percentage::Float64=70.0,
-    stop_steps::Int64=200,
+    fairness::Function=jain_fairness,
+    neighborhood_func::Function=delta_neighbor_in_switch_location,
+    step_func::Function=delta_step_best,
+    n_iterations::Int64=200,
+    iter_n::Int64=0, # any loop == outer loop
     verbose::Bool=true,
 )
-    iter_n = 0
     iter_score = Vector{Float64}()
-    start_time::Float64 = time()
     no_improvement_steps::Int64 = 0
     best_solution = solution
     best_score = score
-    while (time() - start_time < stop_time) && ((best_score / score) * 100 > stop_percentage) && (no_improvement_steps < stop_steps)
-        curr_solution, curr_score = delta_get_neighbor_solution(instance, best_solution, best_score, neighborhood_func, step_func)
+    n_iterations += iter_n
+    while iter_n < n_iterations
+        curr_solution, curr_score = delta_get_neighbor_solution(
+            fairness,
+            neighborhood_func,
+            step_func,
+            instance,
+            best_solution,
+            best_score
+        )
         if curr_score < best_score
             best_score = curr_score
             best_solution = curr_solution
@@ -38,7 +44,6 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__ # if main
     _, _, solution, score = solve_PDPInstance(
         ;
-        path_dir="instances",
         instance_size="50",
         instance_type="train",
         instance_name="instance1_nreq50_nveh2_gamma50.txt",
@@ -47,14 +52,10 @@ if abspath(PROGRAM_FILE) == @__FILE__ # if main
     )
     test_PDPInstance(
         ;
-        path_dir="instances",
         instance_size="50",
         instance_type="train",
         instance_name="instance1_nreq50_nveh2_gamma50.txt",
         algorithm=delta_local_search,
-        Dict(:solution => solution,
-            :score => score,
-            :neighborhood_func => delta_neighbor_in_switch_location,
-            :step_func => delta_step_best)...,
+        Dict(:solution => solution, :score => score)...,
     )
 end

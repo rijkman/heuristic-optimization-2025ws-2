@@ -1,7 +1,0 @@
-Warning: == irace == A default scenario file '/home1/e12434685/tuning/scenario.txt' has been found and will be read.
-Error: == irace == Insufficient budget: With the current settings and estimated time per run (9) irace will require a value of 'maxTime' of at least '357'.
-In addition: Warning message:
-In irace.cmdline() : 'irace.cmdline' is deprecated.
-Use 'irace.cmdline' instead.
-See help("Deprecated")
-Execution halted

@@ -3,8 +3,9 @@ include("greedy.jl")
 
 function greedy_heuristic_one_extend_random(
     instance::PDPInstance;
+    fairness::Function=jain_fairness,
     lookahead_gamma::Union{Int64,Nothing}=nothing,
-    verbose::Bool=true
+    verbose::Bool=true,
 )
     solution = [Int64[] for _ in 1:instance.n_vehicles]
     distances = [0 for _ in 1:instance.n_vehicles]
@@ -14,6 +15,7 @@ function greedy_heuristic_one_extend_random(
     served_requests = 0
     rand_alpha = 0.1
     return greedy_heuristic_from_solution_random(
+        fairness,
         instance,
         solution,
         distances,
@@ -28,6 +30,7 @@ function greedy_heuristic_one_extend_random(
 end
 
 function greedy_heuristic_from_solution_random(
+    fairness::Function,
     instance::PDPInstance,
     best_solution::PDPSolutionVector,
     best_distances::Vector{Int64},
@@ -42,12 +45,6 @@ function greedy_heuristic_from_solution_random(
     iter_n = 0
     iter_score = Vector{Float64}()
     while served_requests < instance.γ
-        # log_unsatisfied(served_requests, instance.γ, verbose)
-        any_open_locs = vcat(open_pickups..., open_dropoffs...)
-        if length(any_open_locs) == 0
-            log_unfeasable(verbose)
-            return best_solution
-        end
         # loop over all possible solutions for [one-step location extensions]
         candidate_steps = Vector{Tuple{Float64,Int64,Int64,Int64}}()
         for route_k in 1:instance.n_vehicles
@@ -59,6 +56,7 @@ function greedy_heuristic_from_solution_random(
                 if can_visit
                     # check resulting objective score
                     curr_score, curr_distance = delta_objective_value_construct(
+                        fairness,
                         instance,
                         best_solution,
                         best_distances,
@@ -95,7 +93,7 @@ function greedy_heuristic_from_solution_random(
         end
     end
     best_solution = solution_clean!(instance, best_solution)
-    best_score = objective_value(instance, best_solution)
+    best_score = objective_value(fairness, instance, best_solution)
     log_result(instance, best_solution, best_score, verbose)
     return (iter_score, iter_n, best_solution, best_score)
 end
@@ -104,7 +102,6 @@ if abspath(PROGRAM_FILE) == @__FILE__ # if main
     Random.seed!(1)
     test_PDPInstance(
         ;
-        path_dir="instances",
         instance_size="50",
         instance_type="train",
         instance_name="instance1_nreq50_nveh2_gamma50.txt",

@@ -1,4 +1,4 @@
-using Plots, Printf, Logging
+#!/usr/bin/env julia
 include("instance_parsing.jl")
 
 function log_unsatisfied(served_requests::Int64, instance_γ::Int64, verbose::Bool=true)
@@ -13,7 +13,7 @@ function log_unfeasable(verbose::Bool=true)
     end
 end
 
-function log_iteration(iter_n::Int64, best_score::Float64, verbose::Bool=true)
+function log_iteration(iter_n::Int64, best_score::Union{Float32,Float64}, verbose::Bool=true)
     if verbose
         @info "Iteration $(iter_n+1) yielded best score: $(@sprintf("%.2f", best_score))."
     end

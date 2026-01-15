@@ -1,47 +1,37 @@
 #!/usr/bin/env julia
-include("solution_iter_delta.jl")
 include("greedy_random.jl")
-using Random, DataStructures, IterTools, StatsBase, Combinatorics, Plots, Printf, Logging # TODO: move all imports to instance_parsing
 
-# https://cleveralgorithms.com/nature-inspired/swarm/ant_colony_system.html
-
-function delta_ant_colony_system(
+function ant_colony_system(
     instance::PDPInstance;
-    n_iter::Int64,
-    m_colony::Int64,
-    local_phero_decay::Float64,
-    phero_decay::Float64,
-    beta::Float64,
-    alpha::Float64,
-    factor_greed::Float64,
+    solution::PDPSolutionVector,
+    score::Float64,
+    fairness::Function=jain_fairness,
+    # runtime parameters
+    n_iterations::Int64=200,
+    m_colony::Int64=50,
+    # pheromone evaporation coefficients
+    local_phero_decay::Float64=0.05,
+    phero_decay::Float64=0.1,
+    # state transition coefficients
+    beta::Float64=3.0,
+    alpha::Float64=1.0,
+    factor_greed::Float64=0.9,
+    # defaults
     verbose::Bool=true,
-    score::Float64
 )
-    # n_iter = 500 # 3000
-    # m_colony = 100 # 200 
     n_locations = length(instance.locations)
     # desirability of state transition // a priori
     attract_level_demo = 1 ./ instance.distance_matrix # must calculate per iteration on-the-fly 
     # amount of pheromones // a posteriori
-    phero_init = 1 / (n_locations * score) # TODO: test fully random solution over greedy_heuristic_one_extend_random
+    phero_init = 1 / (n_locations * score)
     phero_level = ones(n_locations, n_locations) * phero_init
-
-    # pheromone evaporation coefficients
-    # local_phero_decay = 0.05
-    # phero_decay = 0.1
-
-    # state transition coefficients
-    # beta = 3.0
-    # alpha = 1.0
-    # factor_greed = 0.9
-    # TODO: tune all params
 
     iter_n = 0 # any loop
     iter_score = Vector{Float64}()
     best_score = Inf
-    best_solution = nothing
+    best_solution = solution
     curr_iter = 0 # outer loop
-    while curr_iter < n_iter # iterate over n tries across m ants
+    while curr_iter < n_iterations # iterate over n tries across m ants
         for k in 1:m_colony
             # keep track of solution [analogous to greedy scheme]
             ant_score = Inf
@@ -52,21 +42,21 @@ function delta_ant_colony_system(
             open_dropoffs = [Int64[] for _ in 1:instance.n_vehicles]
             served_requests = 0
 
-            # start with explorative random move # TODO: validate
-            # start_route_k = rand(1:instance.n_vehicles)
-            # start_loc_i = rand(open_pickups)
-            # _, start_distance = delta_objective_value_construct(instance, ant_solution, ant_distances, start_route_k, start_loc_i)
-            # solution_step_update!(
-            #     instance,
-            #     ant_solution,
-            #     ant_distances,
-            #     ant_loads,
-            #     start_route_k,
-            #     start_loc_i,
-            #     start_distance,
-            #     open_pickups,
-            #     open_dropoffs,
-            # )
+            # start with explorative random move
+            start_route_k = rand(1:instance.n_vehicles)
+            start_loc_i = rand(open_pickups)
+            _, start_distance = delta_objective_value_construct(fairness, instance, ant_solution, ant_distances, start_route_k, start_loc_i)
+            solution_step_update!(
+                instance,
+                ant_solution,
+                ant_distances,
+                ant_loads,
+                start_route_k,
+                start_loc_i,
+                start_distance,
+                open_pickups,
+                open_dropoffs,
+            )
 
             # construct vehicle tour [analogous to greedy scheme]
             while served_requests < instance.γ
@@ -85,7 +75,7 @@ function delta_ant_colony_system(
                         _, _, is_pickup, load_i = instance.requests[loc_i]
                         can_visit = (ant_loads[route_k] + load_i) <= instance.capacity || !is_pickup
                         if can_visit
-                            curr_score, curr_distance = delta_objective_value_construct(instance, ant_solution, ant_distances, route_k, loc_i)
+                            curr_score, curr_distance = delta_objective_value_construct(fairness, instance, ant_solution, ant_distances, route_k, loc_i)
                             attract_level[route_curr_loc, loc_i] = 1 / curr_score
                             push!(route_cand_locs, loc_i)
                             push!(route_cand_step, (route_k, loc_i, curr_score, curr_distance))
@@ -127,7 +117,7 @@ function delta_ant_colony_system(
         update_pheromones_global!(best_solution, best_score, phero_level, phero_decay)
         curr_iter += 1
     end
-    best_score = objective_value(instance, best_solution)
+    best_score = objective_value(fairness, instance, best_solution)
     log_result(instance, best_solution, best_score, verbose)
     return (iter_score, iter_n, best_solution, best_score)
 end
@@ -192,20 +182,18 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__ # if main
     _, _, solution, score = solve_PDPInstance(
         ;
-        path_dir="instances",
         instance_size="50",
         instance_type="train",
         instance_name="instance1_nreq50_nveh2_gamma50.txt",
-        algorithm=greedy_heuristic_one_extend_random,
+        algorithm=greedy_heuristic_one_extend,
         Dict(:verbose => false)...
     )
     test_PDPInstance(
         ;
-        path_dir="instances",
         instance_size="50",
         instance_type="train",
         instance_name="instance1_nreq50_nveh2_gamma50.txt",
-        algorithm=delta_ant_colony_system,
+        algorithm=ant_colony_system,
         Dict(:solution => solution, :score => score)...,
     )
 end

@@ -1,10 +1,11 @@
 #!/usr/bin/env julia
-include("solution_iter_delta.jl")
+include("../solution_iter_delta.jl")
 
 function greedy_heuristic_one_extend(
     instance::PDPInstance;
+    fairness::Function=jain_fairness,
     lookahead_gamma::Union{Int64,Nothing}=nothing,
-    verbose::Bool=true
+    verbose::Bool=true,
 )
     solution = [Int64[] for _ in 1:instance.n_vehicles]
     distances = [0 for _ in 1:instance.n_vehicles]
@@ -13,6 +14,7 @@ function greedy_heuristic_one_extend(
     open_dropoffs = [Int64[] for _ in 1:instance.n_vehicles]
     served_requests = 0
     return greedy_heuristic_from_solution(
+        fairness,
         instance,
         solution,
         distances,
@@ -25,9 +27,11 @@ function greedy_heuristic_one_extend(
     )
 end
 
-function greedy_heuristic_from_solution(
+function greedy_heuristic_from_partial(
+    fairness::Function,
     instance::PDPInstance,
-    partial_solution::PDPSolutionVector
+    partial_solution::PDPSolutionVector,
+    verbose::Bool,
 )
     distances = Vector{Int64}()
     loads = Vector{Int64}()
@@ -48,7 +52,7 @@ function greedy_heuristic_from_solution(
         t_dist += instance.distance_matrix[partial_solution[vehicle_k][end], end]
         push!(distances, t_dist)
         push!(loads, t_load)
-        
+
     end
 
     open_pickups = Set{Int64}()
@@ -59,7 +63,7 @@ function greedy_heuristic_from_solution(
             scheduled_reqs[req] = k
         end
     end
-    
+
     for req in instance.requests
         pickup_idx, dropoff_idx, is_pickup, _ = req
         if is_pickup
@@ -74,6 +78,7 @@ function greedy_heuristic_from_solution(
     served_requests = sum(pc_served_requests(instance, partial_solution))
 
     return greedy_heuristic_from_solution(
+        fairness,
         instance,
         partial_solution,
         distances,
@@ -82,11 +87,12 @@ function greedy_heuristic_from_solution(
         open_dropoffs,
         served_requests,
         nothing,
-        false
+        verbose
     )
 end
 
 function greedy_heuristic_from_solution(
+    fairness::Function,
     instance::PDPInstance,
     best_solution::PDPSolutionVector,
     best_distances::Vector{Int64},
@@ -100,12 +106,6 @@ function greedy_heuristic_from_solution(
     iter_n = 0
     iter_score = Vector{Float64}()
     while served_requests < instance.γ
-        # log_unsatisfied(served_requests, instance.γ, verbose)
-        any_open_locs = vcat(open_pickups..., open_dropoffs...)
-        if length(any_open_locs) == 0
-            log_unfeasable(verbose)
-            return best_solution
-        end
         # loop over all possible solutions for [one-step location extensions]
         best_score = Inf64
         best_loc = -1
@@ -120,6 +120,7 @@ function greedy_heuristic_from_solution(
                 if can_visit
                     # check resulting objective score
                     curr_score, curr_distance = delta_objective_value_construct(
+                        fairness,
                         instance,
                         best_solution,
                         best_distances,
@@ -156,7 +157,7 @@ function greedy_heuristic_from_solution(
         end
     end
     best_solution = solution_clean!(instance, best_solution)
-    best_score = objective_value(instance, best_solution)
+    best_score = objective_value(fairness, instance, best_solution)
     log_result(instance, best_solution, best_score, verbose)
     return (iter_score, iter_n, best_solution, best_score)
 end
@@ -209,7 +210,6 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__ # if main
     test_PDPInstance(
         ;
-        path_dir="instances",
         instance_size="50",
         instance_type="train",
         instance_name="instance1_nreq50_nveh2_gamma50.txt",

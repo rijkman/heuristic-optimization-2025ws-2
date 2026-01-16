@@ -289,7 +289,7 @@ function main_init()
 
     # [task 3] - parameter tuning using [irace]
     TUNING_EXEC_TYPES = ["train"]
-    TUNING_EXEC_SIZES = ["50"] # , "100", "200", "500", "1000"
+    TUNING_EXEC_SIZES = ["50", "100"] # "200", "500", "1000"
     TUNING_ALGORITHMS = ["acs", "lns"]
     main_tune(TUNING_STORE_DIR, TUNING_EXEC_TYPES, TUNING_EXEC_SIZES, TUNING_ALGORITHMS)
 

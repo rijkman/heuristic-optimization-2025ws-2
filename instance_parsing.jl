@@ -27,7 +27,6 @@ BASE_DIR = "data"
 INSTANCE_DIR = "instances"
 
 function read_PDPInstance(path_full::String)
-    @info "Reading new instance."
     open(path_full, "r") do f
         # read in params
         params = split(readline(f), " ")

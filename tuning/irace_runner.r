@@ -72,7 +72,7 @@ trainInstancesDir <- file.path("..", "data", "instances", instance_size)
 
 ## Number of instances evaluated before the first elimination test. It must be
 ## a multiple of `eachTest`.
-# firstTest <- 5 ## firstTest <- 15
+firstTest <- 15
 
 ## Number of training instances, that make up a 'block' in
 ## `trainInstancesFile`. Elimination of configurations will only be performed
@@ -84,7 +84,7 @@ trainInstancesDir <- file.path("..", "data", "instances", instance_size)
 # blockSize <- 1
 
 ## Number of instances evaluated between elimination tests.
-# eachTest <- 1 ## eachTest <- 5
+eachTest <- 5
 
 ## Executable called for each configuration that executes the target algorithm
 ## to be tuned. See the templates and examples provided.
@@ -145,7 +145,7 @@ maxExperiments <- 500
 ## `targetRunner` must return two values: cost and time. This value and the
 ## one returned by `targetRunner` must use the same units (seconds, minutes,
 ## iterations, evaluations, ...).
-maxTime <- 7200
+maxTime <- 16000
 
 ## Fraction (smaller than 1) of the budget used to estimate the mean
 ## computation time of a configuration. Only used when `maxTime` > 0
@@ -256,14 +256,14 @@ parallel <- 24
 # minNbSurvival <- 0
 
 ## Number of configurations to be sampled and evaluated at each iteration.
-# nbConfigurations <- 0 ## nbConfigurations <- 10
+nbConfigurations <- 10
 
 ## Parameter used to define the number of configurations sampled and evaluated
 ## at each iteration.
 # mu <- 5
 
 ## Confidence level for the elimination test.
-# confidence <- 0.95 ## confidence <- 0.90
+confidence <- 0.90
 
 ## END of scenario file
 ############################################################################
@@ -275,14 +275,14 @@ arguments <- list(
   trainInstancesDir = trainInstancesDir,
   targetRunner = targetRunner,
   targetCmdline = targetCmdline,
-  # firstTest = firstTest,
-  # eachTest = eachTest,
+  firstTest = firstTest,
+  eachTest = eachTest,
   # maxExperiments = maxExperiments,
   maxTime = maxTime,
   # budgetEstimation = budgetEstimation,
-  parallel = parallel
-  # nbConfigurations = nbConfigurations,
-  # confidence = confidence
+  parallel = parallel,
+  nbConfigurations = nbConfigurations,
+  confidence = confidence
 )
 for (arg in names(arguments)) {
   scenario[[arg]] <- arguments[[arg]]

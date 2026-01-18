@@ -7,6 +7,7 @@ include("./scripts/acs.jl")
 include("./scripts/lns.jl")
 Plots.default(show=false)
 
+INSTANCE_SIZES = ["50", "100", "200", "500", "1000", "2000", "5000", "10000"]
 DATA_DIR = "data"
 READ_DIR = "instances"
 BASELINE_STORE_DIR = "baseline"
@@ -150,6 +151,12 @@ function main(
                         end
                         if use_tune # use tuned parameters
                             file_args = joinpath(path_instance_args, algorithm_name, "irace.csv")
+                            size_idx = findfirst(==(instance_size), INSTANCE_SIZES)
+                            while !isfile(file_args) # fallback to smaller tuned
+                                size_idx -= 1
+                                path_instance_args = joinpath(path_data, TUNING_STORE_DIR, INSTANCE_SIZES[size_idx], "train")
+                                file_args = joinpath(path_instance_args, algorithm_name, "irace.csv")
+                            end
                             if isfile(file_args)
                                 args_tune = Dict(pairs(first(CSV.File(file_args))))
                                 args_algo = collect(Iterators.flatten(Base.kwarg_decl.(methods(algorithm))))
@@ -266,7 +273,7 @@ function main_init()
             use_sol=true,
             use_tune=false,
             is_random=true,
-            instance_cap=10000
+            instance_cap=100
         ),
         AlgorithmConfig(
             algorithm_name="lns_maxmin",
@@ -275,7 +282,7 @@ function main_init()
             use_sol=true,
             use_tune=false,
             is_random=true,
-            instance_cap=10000
+            instance_cap=100
         ),
         AlgorithmConfig(
             algorithm_name="lns_gini",
@@ -284,20 +291,20 @@ function main_init()
             use_sol=true,
             use_tune=false,
             is_random=true,
-            instance_cap=10000
+            instance_cap=100
         ),
     ]
     main(FAIRNESS_STORE_DIR, FAIRNESS_EXEC_TYPES, FAIRNESS_EXEC_SIZES, FAIRNESS_ALGORITHMS)
 
     # [task 3] - parameter tuning using [irace]
     TUNING_EXEC_TYPES = ["train"]
-    TUNING_EXEC_SIZES = ["50", "100", "200", "500"]
+    TUNING_EXEC_SIZES = ["50", "100"] # "200", "500"
     TUNING_ALGORITHMS = ["acs", "lns"]
     main_tune(TUNING_STORE_DIR, TUNING_EXEC_TYPES, TUNING_EXEC_SIZES, TUNING_ALGORITHMS)
 
     # [task 4] - best experiments; using tuning results of [task 3]
     EXP_EXEC_TYPES = ["test"]
-    EXP_EXEC_SIZES = ["50", "100", "200", "500", "1000"]
+    EXP_EXEC_SIZES = ["50", "100"] # "200", "500"
     EXP_ALGORITHMS = [
         AlgorithmConfig(
             algorithm_name="gvns",
@@ -324,7 +331,7 @@ function main_init()
 
     # [task X] - competition
     COMP_EXEC_TYPES = ["competition"]
-    COMP_EXEC_SIZES = ["50", "100", "200", "500", "1000"] # "2000", "5000", "10000"
+    COMP_EXEC_SIZES = ["100", "1000", "2000"]
     COMP_ALGORITHMS = [
         AlgorithmConfig(
             algorithm_name="acs",

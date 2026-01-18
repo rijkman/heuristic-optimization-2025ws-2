@@ -150,10 +150,12 @@ function main(
                         end
                         if use_tune # use tuned parameters
                             file_args = joinpath(path_instance_args, algorithm_name, "irace.csv")
-                            args_tune = Dict(pairs(first(CSV.File(file_args))))
-                            args_algo = collect(Iterators.flatten(Base.kwarg_decl.(methods(algorithm))))
-                            args_valid = Dict(k => v for (k, v) in args_tune if k in args_algo)
-                            args = merge(args, args_valid)
+                            if isfile(file_args)
+                                args_tune = Dict(pairs(first(CSV.File(file_args))))
+                                args_algo = collect(Iterators.flatten(Base.kwarg_decl.(methods(algorithm))))
+                                args_valid = Dict(k => v for (k, v) in args_tune if k in args_algo)
+                                args = merge(args, args_valid)
+                            end
                         end
                         # rerun multiple times if random
                         seed_runs = []
@@ -257,45 +259,45 @@ function main_init()
             is_random=false,
             instance_cap=10000
         ),
-        # AlgorithmConfig(
-        #     algorithm_name="lns_jain",
-        #     algorithm=large_neighborhood_search,
-        #     argset=ArgDict(:fairness => jain_fairness),
-        #     use_sol=true,
-        #     use_tune=false,
-        #     is_random=true,
-        #     instance_cap=10000
-        # ),
-        # AlgorithmConfig(
-        #     algorithm_name="lns_maxmin",
-        #     algorithm=large_neighborhood_search,
-        #     argset=ArgDict(:fairness => max_min_fairness),
-        #     use_sol=true,
-        #     use_tune=false,
-        #     is_random=true,
-        #     instance_cap=10000
-        # ),
-        # AlgorithmConfig(
-        #     algorithm_name="lns_gini",
-        #     algorithm=large_neighborhood_search,
-        #     argset=ArgDict(:fairness => gini_fairness),
-        #     use_sol=true,
-        #     use_tune=false,
-        #     is_random=true,
-        #     instance_cap=10000
-        # ),
+        AlgorithmConfig(
+            algorithm_name="lns_jain",
+            algorithm=large_neighborhood_search,
+            argset=ArgDict(:fairness => jain_fairness),
+            use_sol=true,
+            use_tune=false,
+            is_random=true,
+            instance_cap=10000
+        ),
+        AlgorithmConfig(
+            algorithm_name="lns_maxmin",
+            algorithm=large_neighborhood_search,
+            argset=ArgDict(:fairness => max_min_fairness),
+            use_sol=true,
+            use_tune=false,
+            is_random=true,
+            instance_cap=10000
+        ),
+        AlgorithmConfig(
+            algorithm_name="lns_gini",
+            algorithm=large_neighborhood_search,
+            argset=ArgDict(:fairness => gini_fairness),
+            use_sol=true,
+            use_tune=false,
+            is_random=true,
+            instance_cap=10000
+        ),
     ]
     main(FAIRNESS_STORE_DIR, FAIRNESS_EXEC_TYPES, FAIRNESS_EXEC_SIZES, FAIRNESS_ALGORITHMS)
 
     # [task 3] - parameter tuning using [irace]
     TUNING_EXEC_TYPES = ["train"]
-    TUNING_EXEC_SIZES = ["50", "100"] # "200", "500", "1000"
+    TUNING_EXEC_SIZES = ["50", "100", "200", "500"]
     TUNING_ALGORITHMS = ["acs", "lns"]
     main_tune(TUNING_STORE_DIR, TUNING_EXEC_TYPES, TUNING_EXEC_SIZES, TUNING_ALGORITHMS)
 
     # [task 4] - best experiments; using tuning results of [task 3]
     EXP_EXEC_TYPES = ["test"]
-    EXP_EXEC_SIZES = ["50"] # "100", "200", "500", "1000"
+    EXP_EXEC_SIZES = ["50", "100", "200", "500", "1000"]
     EXP_ALGORITHMS = [
         AlgorithmConfig(
             algorithm_name="gvns",
@@ -322,7 +324,7 @@ function main_init()
 
     # [task X] - competition
     COMP_EXEC_TYPES = ["competition"]
-    COMP_EXEC_SIZES = ["50"] # "100", "200", "500", "1000", "2000", "5000", "10000"
+    COMP_EXEC_SIZES = ["50", "100", "200", "500", "1000"] # "2000", "5000", "10000"
     COMP_ALGORITHMS = [
         AlgorithmConfig(
             algorithm_name="acs",
